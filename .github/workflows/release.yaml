@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Build binary
+        run: |
+          GOOS=darwin GOARCH=amd64 go build -o qsys-discover-amd64
+          GOOS=darwin GOARCH=arm64 go build -o qsys-discover-arm64
+          lipo -create -output qsys-discover qsys-discover-amd64 qsys-discover-arm64
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: qsys-discover
+
+      - name: Update Homebrew Formula
+        uses: mislav/bump-homebrew-formula-action@v2
+        with:
+          formula-name: qsys-discover
+          homebrew-tap: mikejobson/homebrew-tap
+          download-url: https://github.com/mikejobson/qsys-discover/releases/download/${{ github.ref_name }}/qsys-discover
+        env:
+          COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
